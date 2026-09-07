@@ -1,12 +1,14 @@
 import {
   ArrowLeft,
+  Calendar,
   CheckCircle,
   FileText,
   Loader2,
+  Trash2,
   TriangleAlert,
 } from "lucide-react";
 import { lazy, Suspense, useEffect, useState } from "react";
-import { Link, useParams } from "react-router";
+import { Link, useNavigate, useParams } from "react-router";
 import {
   Accordion,
   AccordionContent,
@@ -14,6 +16,7 @@ import {
   AccordionTrigger,
 } from "~/components/ui/accordion";
 import { Badge } from "~/components/ui/badge";
+import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Skeleton } from "~/components/ui/skeleton";
@@ -44,19 +47,24 @@ interface DBResume {
   jobTitle: string;
   jobDescription: string;
   resumePath: string;
-  imagePath: string;
   feedback: AnalysisResult | null;
+  createdAt: string;
 }
 
 const Resume = () => {
+  const navigate = useNavigate();
   const { id } = useParams();
   const [resume, setResume] = useState<DBResume | null>(null);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchResume = async () => {
       try {
+        await Promise.all([
+          new Promise((resolve) => setTimeout(resolve, 500)), // Simulate a 1-second delay
+        ]);
         const res = await fetch(`http://localhost:3333/api/resumes/${id}`);
         const data = await res.json();
         if (res.ok) {
@@ -75,10 +83,8 @@ const Resume = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items=center justify-center ">
-        <p className="text-lg font-semibold animate-pulse ">
-          Loading your AI analysis...
-        </p>
+      <div className="min-h-screen flex items-center justify-center ">
+        <Loader2 className="h-24 w-24 animate-spin" />
       </div>
     );
   }
@@ -123,7 +129,7 @@ const Resume = () => {
       <div className="w-112.5 aspect-[1/1.41] relative rounded-md overflow-hidden bg-muted/40 border border-dashed border-muted-foreground/20 flex items-center justify-center">
         <Skeleton className="w-full h-full absolute inset-0" />
         <div className="relative z-10 flex items-center justify-center">
-          <Loader2 className="h-24 w-24 animate-spin " />
+          <Loader2 className="h-24 w-24 animate-spin" />
         </div>
       </div>
     );
@@ -153,6 +159,41 @@ const Resume = () => {
     };
   };
 
+  const handleDelete = async (
+    id: string,
+    e: React.MouseEvent<HTMLButtonElement>,
+  ) => {
+    e.preventDefault();
+    if (!confirm("Are you sure you want to delete this resume?")) return;
+
+    try {
+      const res = await fetch(`http://localhost:3333/api/resumes/${id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || `Failed to delete resume: ${res.status}`);
+      }
+      navigate(`/resumes/${data.id}`);
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : `An unknown error occurred: ${error}`;
+      console.error("Error deleting resume:", error);
+      setError(errorMessage);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      year: "2-digit",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       {/* Top Header Bar */}
@@ -162,39 +203,65 @@ const Resume = () => {
             <ArrowLeft size={20} />
           </Link>
           <div>
-            <h1 className="text-xl font-bold">Job Title: {resume.jobTitle}</h1>
-            <p className="text-sm ">Applied to: {resume.companyName}</p>
+            <h1 className="text-xl font-bold animate-in fade-in duration-400">
+              Job Title: {resume.jobTitle}
+            </h1>
+            <p className="text-sm animate-in fade-in duration-600">
+              Applied to: {resume.companyName}
+            </p>
           </div>
         </div>
       </header>
 
       {/* Main Split-Screen Layout */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 p-6 w-full mx-auto">
-        {/* LEFT COLUMN: PDF View (Takes up 5/12 grid columns) */}
-        <section className="lg:col-span-5 rounded-2xl shadow-md border flex flex-col overflow-hidden">
-          <div className=" px-4 py-3 border-b flex items-center justify-between">
-            <span className="text-sm font-semibold flex items-center gap-2">
-              <FileText size={16} /> Original Resume
-            </span>
-            <a
-              href={pdfURL}
-              target="_blank"
-              rel="noreferrer"
-              className="text-xs hover:underline font-medium"
-            >
-              Open in new tab
-            </a>
-          </div>
+      <div className="flex flex-col lg:flex-row gap-6 items-start p-6 w-full mx-auto">
+        {/* LEFT COLUMN: PDF View */}
+        <section className="w-full lg:w-fit shrink-0 overflow-hidden">
+          <Card className="hover:shadow-lg transition-all duration-300 border overflow-hidden relative cursor-pointer w-full max-w-md">
+            <CardHeader className="flex flex-row items-start justify-between pb-2 space-y-0">
+              <div className="space-y-1 pr-4 w-full">
+                <CardTitle className="text-lg font-bold flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <FileText size={16} /> Original Resume
+                  </div>
+                  <a
+                    href={pdfURL}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs hover:underline font-medium"
+                  >
+                    Open in new tab
+                  </a>
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center justify-between">
+              <Suspense fallback={<PdfSkeleton />}>
+                <ResumePreview pdfUrl={pdfURL} />
+              </Suspense>
 
-          <Suspense fallback={<PdfSkeleton />}>
-            <ResumePreview pdfUrl={pdfURL} />
-          </Suspense>
+              <div className="w-full flex items-center justify-between mt-4">
+                <div className="flex items-center gap-2 text-xs">
+                  <Calendar size={13} />
+                  <span>{formatDate(resume.createdAt)}</span>
+                </div>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  onClick={(e) => handleDelete(resume.id, e)}
+                >
+                  <Trash2 size={16} />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </section>
 
         {/* RIGHT COLUMN: AI Feedback (Takes up 7/12 grid columns) */}
-        <section className="lg:col-span-7 flex flex-col gap-6 pr-2">
+        <section className="flex-1 w-full grid grid-cols-1 lg:grid-cols-2 gap-6 items-start pr-2">
           {/* Overall & ATS Score Metrics */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="flex flex-col gap-6">
             {/* Overall Score Circle */}
             <Card className="shadow-md">
               <CardHeader className="border-b">
@@ -315,7 +382,7 @@ const Resume = () => {
                     {getScoreDescription(analysis.ATS.score)}
                   </Badge>
                 </div>
-                <span className="font-semibold ">
+                <span>
                   Your resume was scanned like an employer would. Here's how it
                   performed:
                 </span>
@@ -353,7 +420,8 @@ const Resume = () => {
                 </div>
               </CardContent>
             </Card>
-
+          </div>
+          <div className="flex flex-col gap-6">
             {/* Resume Feedback Card */}
             <Card className="shadow-md">
               <CardHeader className="border-b">
@@ -366,7 +434,7 @@ const Resume = () => {
                 <Accordion type="multiple">
                   <AccordionItem
                     value="tone-and-style-tips"
-                    className="border-b last:botder-b-0"
+                    className="border-b"
                   >
                     <AccordionTrigger className="text-lg font-semibold hover:no-underline">
                       <div className="flex items-center gap-4 w-full">
@@ -378,28 +446,8 @@ const Resume = () => {
                         </Badge>
                       </div>
                     </AccordionTrigger>
-                    <AccordionContent>
-                      <div className="flex flex-col gap-4 pb-6 pt-2">
-                        <ul className="flex flex-wrap items-center justify-between gap-3 p-4 bg-muted/50 rounded-lg border">
-                          {analysis.toneAndStyle.tips.map((tip, index) => {
-                            const isGoodTip = tip.type === "good";
-                            return (
-                              <li
-                                key={index}
-                                className="flex items-center leading-relaxed gap-2"
-                              >
-                                {isGoodTip ? (
-                                  <CheckCircle className="text-green-500 shrink-0" />
-                                ) : (
-                                  <TriangleAlert className="text-yellow-500 shrink-0" />
-                                )}
-                                <span className="font-medium text-foreground">
-                                  {tip.tip}
-                                </span>
-                              </li>
-                            );
-                          })}
-                        </ul>
+                    <AccordionContent >
+                      <div className="flex flex-col gap-4">
                         {analysis.toneAndStyle.tips.map((tip, index) => {
                           const isGoodTip = tip.type === "good";
                           return (
@@ -444,10 +492,7 @@ const Resume = () => {
 
                 {/* Structure Tips List */}
                 <Accordion type="multiple">
-                  <AccordionItem
-                    value="structure-tips"
-                    className="border-b last:botder-b-0"
-                  >
+                  <AccordionItem value="structure-tips" className="border-b">
                     <AccordionTrigger className="text-lg font-semibold hover:no-underline">
                       <div className="flex items-center gap-4 w-full">
                         <span>Structure</span>
@@ -459,24 +504,7 @@ const Resume = () => {
                       </div>
                     </AccordionTrigger>
                     <AccordionContent>
-                      <div className="flex flex-col gap-4 pb-6 pt-2">
-                        <ul className="flex flex-wrap items-center justify-between gap-3 p-4 bg-muted/50 rounded-lg border">
-                          {analysis.structure.tips.map((tip, index) => (
-                            <li
-                              key={index}
-                              className="flex items-center leading-relaxed gap-2"
-                            >
-                              {tip.type === "good" ? (
-                                <CheckCircle className="text-green-500 shrink-0" />
-                              ) : (
-                                <TriangleAlert className="text-yellow-500 shrink-0" />
-                              )}
-                              <span className="font-medium text-foreground">
-                                {tip.tip}
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
+                      <div className="flex flex-col gap-4">
                         {analysis.structure.tips.map((tip, index) => {
                           const isGoodTip = tip.type === "good";
                           return (
@@ -521,10 +549,7 @@ const Resume = () => {
 
                 {/* Content Tips List */}
                 <Accordion type="multiple">
-                  <AccordionItem
-                    value="content-tips"
-                    className="border-b last:botder-b-0"
-                  >
+                  <AccordionItem value="content-tips" className="border-b ">
                     <AccordionTrigger className="text-lg font-semibold hover:no-underline">
                       <div className="flex items-center gap-4 w-full">
                         <span>Content</span>
@@ -536,24 +561,7 @@ const Resume = () => {
                       </div>
                     </AccordionTrigger>
                     <AccordionContent>
-                      <div className="flex flex-col gap-4 pb-6 pt-2">
-                        <ul className="flex flex-wrap items-center justify-between gap-3 p-4 bg-muted/50 rounded-lg border">
-                          {analysis.content.tips.map((tip, index) => (
-                            <li
-                              key={index}
-                              className="flex items-center leading-relaxed gap-2"
-                            >
-                              {tip.type === "good" ? (
-                                <CheckCircle className="text-green-500 shrink-0" />
-                              ) : (
-                                <TriangleAlert className="text-yellow-500 shrink-0" />
-                              )}
-                              <span className="font-medium text-foreground">
-                                {tip.tip}
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
+                      <div className="flex flex-col gap-4">
                         {analysis.content.tips.map((tip, index) => {
                           const isGoodTip = tip.type === "good";
                           return (
@@ -600,7 +608,7 @@ const Resume = () => {
                 <Accordion type="multiple">
                   <AccordionItem
                     value="skills-tips"
-                    className="border-b last:botder-b-0"
+                    className="border-b  last:border-b-0"
                   >
                     <AccordionTrigger className="text-lg font-semibold hover:no-underline">
                       <div className="flex items-center gap-4 w-full">
@@ -613,24 +621,7 @@ const Resume = () => {
                       </div>
                     </AccordionTrigger>
                     <AccordionContent>
-                      <div className="flex flex-col gap-4 pb-6 pt-2">
-                        <ul className="flex flex-wrap items-center justify-between gap-3 p-4 bg-muted/50 rounded-lg border">
-                          {analysis.skills.tips.map((tip, index) => (
-                            <li
-                              key={index}
-                              className="flex items-center leading-relaxed gap-2"
-                            >
-                              {tip.type === "good" ? (
-                                <CheckCircle className="text-green-500 shrink-0" />
-                              ) : (
-                                <TriangleAlert className="text-yellow-500 shrink-0" />
-                              )}
-                              <span className="font-medium text-foreground">
-                                {tip.tip}
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
+                      <div className="flex flex-col gap-4">
                         {analysis.skills.tips.map((tip, index) => {
                           const isGoodTip = tip.type === "good";
                           return (
@@ -679,7 +670,7 @@ const Resume = () => {
             <Card className="shadow-md">
               <CardHeader className="border-b">
                 <CardTitle className="text-lg font-semibold ">
-                  Resume Improvement Checklist
+                  Improvement Checklist
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex-1 flex flex-col justify-center gap-4">
@@ -697,7 +688,7 @@ const Resume = () => {
                       <li key={index} className="flex leading-relaxed gap-2">
                         <div className="flex flex-row items-center gap-3 leading-relaxed">
                           <Checkbox />
-                          {tip.tip}
+                          <span>{tip.tip}</span>
                         </div>
                       </li>
                     ))}

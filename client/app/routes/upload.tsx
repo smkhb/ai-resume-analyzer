@@ -1,4 +1,4 @@
-import { ArrowLeft, FileUp } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { Link, useNavigate } from "react-router";
@@ -27,8 +27,11 @@ const Upload = () => {
 
     const formData = new FormData(e.currentTarget);
     formData.append("resume", file);
+    setIsProcessing(true);
 
     try {
+      setIsProcessing(true);
+      setStatusText("Analyzing your resume...");
       const res = await fetch("http://localhost:3333/api/analyze", {
         method: "POST",
         body: formData,
@@ -38,14 +41,26 @@ const Upload = () => {
       if (res.ok) {
         navigate(`/resumes/${data.id}`);
       } else {
+        setStatusText("Error occurred while analyzing your resume.");
         console.error("Error: " + data.error);
       }
     } catch (error) {
+      setStatusText("An error occurred while processing your request.");
       console.error(error);
     } finally {
+      setStatusText("");
       setIsProcessing(false);
     }
   };
+
+  if (isProcessing) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-6">
+        <h1 className="text-2xl font-bold mb-4">{statusText}</h1>
+        <Loader2 className="h-24 w-24 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -66,69 +81,63 @@ const Upload = () => {
             Drop your resume for an ATS score and improvement tips
           </h2>
 
-          {isProcessing ? (
-            <div className="text-center py-10">
-              {/* We will add the scanning GIF here later */}
-              <p className="text-lg font-semibold animate-pulse">
-                {statusText}
-              </p>
+          <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="companyName">Company Name</Label>
+              <Input
+                id="companyName"
+                name="companyName"
+                placeholder="e.g. Google"
+                required
+              />
             </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="companyName">Company Name</Label>
-                <Input
-                  id="companyName"
-                  name="companyName"
-                  placeholder="e.g. Google"
-                />
-              </div>
 
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="jobTitle">Job Title</Label>
-                <Input
-                  id="jobTitle"
-                  name="jobTitle"
-                  placeholder="e.g. Frontend Developer"
-                />
-              </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="jobTitle">Job Title</Label>
+              <Input
+                id="jobTitle"
+                name="jobTitle"
+                placeholder="e.g. Frontend Developer"
+                required
+              />
+            </div>
 
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="jobDescription">Job Description</Label>
-                <Textarea
-                  id="jobDescription"
-                  name="jobDescription"
-                  placeholder="Paste the full job description here..."
-                  rows={10}
-                />
-              </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="jobDescription">Job Description</Label>
+              <Textarea
+                id="jobDescription"
+                name="jobDescription"
+                placeholder="Paste the full job description here..."
+                rows={10}
+                required
+              />
+            </div>
 
-              <div className="flex flex-col gap-2">
-                <Label>Upload Resume (PDF)</Label>
-                <div
-                  {...getRootProps()}
-                  className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors bg-input/30 ${
-                    isDragActive
-                      ? "border-blue-500 bg-blue-50"
-                      : "border-input hover:border-ring hover:border-ring-3"
-                  }`}
-                >
-                  <input {...getInputProps()} />
-                  {file ? (
-                    <p className="font-semibold">{file.name}</p>
-                  ) : (
-                    <p className="text-muted-foreground ">
-                      Drag & drop your PDF here, or click to select
-                    </p>
-                  )}
-                </div>
+            <div className="flex flex-col gap-2">
+              <Label>Upload Resume (PDF)</Label>
+              <div
+                {...getRootProps()}
+                className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors bg-input/30 ${
+                  isDragActive
+                    ? "border-blue-500 bg-blue-50"
+                    : "border-input hover:border-ring hover:border-ring-3"
+                }`}
+              >
+                <input {...getInputProps()} />
+                {file ? (
+                  <p className="font-semibold">{file.name}</p>
+                ) : (
+                  <p className="text-muted-foreground ">
+                    Drag & drop your PDF here, or click to select
+                  </p>
+                )}
               </div>
+            </div>
 
-              <Button type="submit" size="lg" className="w-full">
-                Analyze Resume
-              </Button>
-            </form>
-          )}
+            <Button type="submit" size="lg" className="w-full">
+              Analyze Resume
+            </Button>
+          </form>
         </div>
       </main>
     </div>

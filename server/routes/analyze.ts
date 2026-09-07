@@ -38,7 +38,7 @@ app.post("/", async (c) => {
     });
 
     const genAIRequest = await genAI.interactions.create({
-      model: "gemini-3.1-flash-lite",
+      model: process.env.GEMINI_MODEL || "gemini-3.1-flash-lite",
       input: prompt,
       response_format: {
         type: "text",
@@ -55,8 +55,8 @@ app.post("/", async (c) => {
       .trim();
 
     const insert = db.prepare(`
-    INSERT INTO resumes (id, companyName, jobTitle, jobDescription, resumePath, imagePath, feedback)
-    VALUES ($id, $companyName, $jobTitle, $jobDescription, $resumePath, $imagePath, $feedback)
+    INSERT INTO resumes (id, companyName, jobTitle, jobDescription, resumePath, feedback)
+    VALUES ($id, $companyName, $jobTitle, $jobDescription, $resumePath, $feedback)
     `);
 
     insert.run({
@@ -65,7 +65,6 @@ app.post("/", async (c) => {
       $jobTitle: jobTitle,
       $jobDescription: jobDescription,
       $resumePath: resumePath,
-      $imagePath: "", // I will handle the image preview conversion later
       $feedback: cleanedFeedback || "No feedback generated.",
     });
 
