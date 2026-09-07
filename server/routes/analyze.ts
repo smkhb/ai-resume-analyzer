@@ -40,6 +40,10 @@ app.post("/", async (c) => {
     const genAIRequest = await genAI.interactions.create({
       model: process.env.GEMINI_MODEL || "gemini-3.1-flash-lite",
       input: prompt,
+      generation_config: {
+        temperature: 0.2,
+        top_p: 0.95,
+      },
       response_format: {
         type: "text",
         mime_type: "application/json",
