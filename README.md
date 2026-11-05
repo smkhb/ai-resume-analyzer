@@ -1,8 +1,20 @@
-# Resmind — Self-Hosted AI Resume Analyzer
+<img width="2172" height="536" alt="banner-analisador-curriculo-com-ia-final" src="https://github.com/user-attachments/assets/262957ca-917b-4893-8b74-787448a0176c" />
+
+<p align="center">
+  <img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React" />
+  <img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/Hono-E36002?style=for-the-badge&logo=hono&logoColor=white" alt="Hono" />
+  <img src="https://img.shields.io/badge/Bun-FBF0DF?style=for-the-badge&logo=bun&logoColor=black" alt="Bun" />
+  <img src="https://img.shields.io/badge/SQLite-003B57?style=for-the-badge&logo=sqlite&logoColor=white" alt="SQLite" />
+  <img src="https://img.shields.io/badge/shadcn%2Fui-000000?style=for-the-badge&logo=shadcnui&logoColor=white" alt="shadcn/ui" />
+</p>
+
+# Self-Hosted AI Resume Analyzer
 
 An elegant, lightning-fast, and fully self-hosted AI-powered resume analyzer built with **React, TypeScript, Hono, and Bun**. 
 
 Resmind acts as an intelligent job search assistant. It extracts text from your PDF resumes, compares it against any target job description, and generates an instant Applicant Tracking System (ATS) compatibility score alongside highly detailed, structured feedback [1, 3].
+
 
 Unlike cloud-dependent serverless projects, this application runs entirely locally. It utilizes **Bun's native SQLite driver** for history tracking and serves files locally, providing absolute privacy and zero infrastructure costs.
 
